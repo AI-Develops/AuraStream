@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraStream | Ambient Soundboard</title>
+    <style>
+      /* --- CSS Variables & Reset --- */
+      :root {
+        --bg-body: #121212;
+        --bg-card: #1e1e1e;
+        --bg-control: #2c2c2c;
+        --text-main: #e0e0e0;
+        --text-muted: #a0a0a0;
+        --accent-color: #64ffda; /* Zen Teal */
+        --accent-glow: rgba(100, 255, 218, 0.2);
+        --danger-color: #ff6b6b;
+        --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        --radius: 12px;
+        --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: var(--font-family);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 2rem 1rem;
+      }
+
+      /* --- Layout & Typography --- */
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+        opacity: 0;
+        animation: fadeIn 1s ease-out forwards;
+      }
+
+      h1 {
+        font-weight: 300;
+        letter-spacing: 2px;
+        margin-bottom: 0.5rem;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+      }
+
+      main {
+        width: 100%;
+        max-width: 800px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+      }
+
+      /* --- Sound Cards --- */
+      .sound-card {
+        background-color: var(--bg-card);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        border: 1px solid transparent;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sound-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .sound-card.active {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 15px var(--accent-glow);
+      }
+
+      /* Card Header */
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .sound-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+
+      /* Play/Pause Toggle Button */
+      .toggle-btn {
+        background: var(--bg-control);
+        border: none;
+        color: var(--text-main);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+      }
+
+      .toggle-btn:hover {
+        background-color: #333;
+      }
+
+      .sound-card.active .toggle-btn {
+        background-color: var(--accent-color);
+        color: var(--bg-body);
+      }
+
+      /* Volume Slider */
+      .volume-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .slider-container {
+        flex-grow: 1;
+        position: relative;
+        height: 4px;
+        background: var(--bg-control);
+        border-radius: 2px;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        outline: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: pointer;
+      }
+
+      /* Custom Range Thumb */
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: var(--text-main);
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: -6px; /* center thumb */
+      }
+      
+      input[type="range"]::-moz-range-thumb {
+        height: 16px;
+        width: 16px;
+        border: none;
+        border-radius: 50%;
+        background: var(--text-main);
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .sound-card.active input[type="range"]::-webkit-slider-thumb {
+        background: var(--accent-color);
+      }
+      
+      .sound-card.active input[type="range"]::-moz-range-thumb {
+        background: var(--accent-color);
+      }
+
+      /* Visualizer (Ambient Animation) */
+      .visualizer {
+        height: 3px;
+        width: 100%;
+        background-color: var(--bg-control);
+        margin-top: auto;
+        border-radius: 2px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .visualizer-bar {
+        height: 100%;
+        width: 100%;
+        background-color: var(--accent-color);
+        transform: translateX(-100%);
+        opacity: 0.7;
+      }
+
+      .sound-card.active .visualizer-bar {
+        animation: flow 2s infinite linear;
+      }
+
+      /* --- Footer Controls --- */
+      footer {
+        width: 100%;
+        max-width: 800px;
+        display: flex;
+        justify-content: center;
+        animation: fadeIn 1s ease-out 0.3s forwards;
+        opacity: 0;
+      }
+
+      .stop-all-btn {
+        background-color: transparent;
+        border: 1px solid var(--danger-color);
+        color: var(--danger-color);
+        padding: 0.8rem 2rem;
+        font-size: 0.9rem;
+        border-radius: 50px;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .stop-all-btn:hover {
+        background-color: var(--danger-color);
+        color: #fff;
+      }
+
+      /* --- SVGs --- */
+      svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+
+      /* --- Animations --- */
+      @keyframes flow {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0%); }
+        100% { transform: translateX(100%); }
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* --- Responsive --- */
+      @media (max-width: 600px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AuraStream</h1>
+      <p class="subtitle">Focus. Relax. Breathe.</p>
+    </header>
+
+    <main id="soundboard">
+      <!-- Sound cards will be injected here by JavaScript -->
+    </main>
+
+    <footer>
+      <button class="stop-all-btn" id="stopAllBtn">
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        Stop All
+      </button>
+    </footer>
+
+    <script>
+      /**
+       * AuraStream Logic
+       * Modular, Dependency-free JavaScript
+       */
+
+      // Configuration: Define sound sources and metadata
+      // Note: Using stable, public domain sources from Pixabay/Wikimedia CDNs.
+      const soundData = [
+        {
+          id: 'rain',
+          name: 'Heavy Rain',
+          iconPath: 'M4.24 12.24l2.83 2.83 2.83-2.83M14.12 12.24l2.83 2.83 2.83-2.83M10 16v4M4 20h16', // Stylized abstract rain
+          url: 'https://cdn.pixabay.com/download/audio/2022/07/04/audio_b23023531f.mp3?filename=heavy-rain-nature-sounds-8186.mp3'
+        },
+        {
+          id: 'forest',
+          name: 'Forest Birds',
+          iconPath: 'M21 12l-4.75-6-4.75 6h-2.5l5.5-7L8 12H5l7-10 7 10h-2.5l4.5 6z', // Tree-ish
+          url: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_6519b78e22.mp3?filename=forest-birds-11451.mp3'
+        },
+        {
+          id: 'coffee',
+          name: 'Coffee Shop',
+          iconPath: 'M2 21h18v-2H2M20 8h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v3a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V4h16v4zm-2 0V6H4v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3h-2zm0 4h2v-2h-2v2z', // Cup
+          url: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_03d2983794.mp3?filename=people-in-a-restaurant-18925.mp3'
+        },
+        {
+          id: 'waves',
+          name: 'Ocean Waves',
+          iconPath: 'M2 12c2.5 0 2.5 4 5 4s2.5-4 5-4 2.5 4 5 4 2.5-4 5-4M2 16c2.5 0 2.5 4 5 4s2.5-4 5-4 2.5 4 5 4 2.5-4 5-4', // Waves
+          url: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_8ed540707b.mp3?filename=sea-waves-11456.mp3'
+        }
+      ];
+
+      class SoundManager {
+        constructor(data) {
+          this.data = data;
+          this.audioMap = {}; // Holds Audio objects
+          this.container = document.getElementById('soundboard');
+          this.stopAllBtn = document.getElementById('stopAllBtn');
+          
+          this.init();
+        }
+
+        init() {
+          this.renderUI();
+          this.attachGlobalListeners();
+        }
+
+        renderUI() {
+          this.data.forEach(sound => {
+            // 1. Create Audio Object
+            const audio = new Audio(sound.url);
+            audio.loop = true;
+            audio.volume = 0.5; // Default volume
+            this.audioMap[sound.id] = audio;
+
+            // 2. Create HTML Element
+            const card = document.createElement('div');
+            card.className = 'sound-card';
+            card.id = `card-${sound.id}`;
+            
+            card.innerHTML = `
+              <div class="card-header">
+                <span class="sound-title">${sound.name}</span>
+                <button class="toggle-btn" id="btn-${sound.id}" aria-label="Toggle ${sound.name}">
+                   <!-- Play Icon -->
+                   <svg class="icon-play" viewBox="0 0 24 24" id="icon-${sound.id}">
+                     <path d="M8 5v14l11-7z"/>
+                   </svg>
+                </button>
+              </div>
+              
+              <div class="volume-control">
+                <svg viewBox="0 0 24 24" style="width:16px; opacity:0.5"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                <div class="slider-container">
+                  <input type="range" min="0" max="100" value="50" id="vol-${sound.id}" aria-label="Volume for ${sound.name}">
+                </div>
+              </div>
+
+              <div class="visualizer">
+                <div class="visualizer-bar"></div>
+              </div>
+            `;
+
+            this.container.appendChild(card);
+            this.attachCardListeners(sound.id);
+          });
+        }
+
+        attachCardListeners(id) {
+          const btn = document.getElementById(`btn-${id}`);
+          const volSlider = document.getElementById(`vol-${id}`);
+          const card = document.getElementById(`card-${id}`);
+          const iconContainer = document.getElementById(`icon-${id}`);
+
+          // Toggle Play/Pause
+          btn.addEventListener('click', () => {
+            this.toggleSound(id, card, iconContainer);
+          });
+
+          // Volume Control
+          volSlider.addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            this.audioMap[id].volume = volume;
+            
+            // If sound is playing and volume is 0, arguably we keep it playing but silent, 
+            // or we could pause. Here we just set volume.
+          });
+        }
+
+        toggleSound(id, cardElement, iconSvg) {
+          const audio = this.audioMap[id];
+
+          if (audio.paused) {
+            audio.play().then(() => {
+              cardElement.classList.add('active');
+              // Switch to Pause Icon
+              iconSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; 
+            }).catch(e => console.error("Audio Play Error:", e));
+          } else {
+            audio.pause();
+            cardElement.classList.remove('active');
+            // Switch to Play Icon
+            iconSvg.innerHTML = '<path d="M8 5v14l11-7z"/>';
+          }
+        }
+
+        attachGlobalListeners() {
+          this.stopAllBtn.addEventListener('click', () => {
+            Object.keys(this.audioMap).forEach(id => {
+              const audio = this.audioMap[id];
+              const card = document.getElementById(`card-${id}`);
+              const icon = document.getElementById(`icon-${id}`);
+
+              audio.pause();
+              audio.currentTime = 0; // Optional: Reset to start
+              
+              if(card) card.classList.remove('active');
+              if(icon) icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            });
+          });
+        }
+      }
+
+      // Initialize App
+      document.addEventListener('DOMContentLoaded', () => {
+        new SoundManager(soundData);
+      });
+    </script>
+  </body>
+</html>
